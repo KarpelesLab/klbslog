@@ -14,18 +14,20 @@ import (
 )
 
 type SHandler struct {
-	opts  *slog.HandlerOptions
-	queue []map[string]string
-	qlk   sync.Mutex
-	qcd   *sync.Cond
+	opts   *slog.HandlerOptions
+	queue  []map[string]string
+	qlk    sync.Mutex
+	qcd    *sync.Cond
+	parent slog.Handler
 }
 
-func New(opts *slog.HandlerOptions) slog.Handler {
+func New(opts *slog.HandlerOptions, parent slog.Handler) slog.Handler {
 	if opts == nil {
 		opts = &slog.HandlerOptions{}
 	}
 	res := &SHandler{
-		opts: opts,
+		opts:   opts,
+		parent: parent,
 	}
 	res.qcd = sync.NewCond(&res.qlk)
 
@@ -80,6 +82,10 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 	}
 
 	s.append(attrs)
+
+	if s.parent != nil {
+		return s.parent.Handle(ctx, r)
+	}
 	return nil
 }
 
