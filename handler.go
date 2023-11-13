@@ -71,6 +71,11 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 	// attributes are not exported
 	attrs := make(map[string]string)
 
+	if xtra := getExtraAttrs(ctx); len(xtra) > 0 {
+		r = r.Clone()
+		r.AddAttrs(xtra...)
+	}
+
 	r.Attrs(func(a slog.Attr) bool {
 		attrs[a.Key] = a.Value.String()
 		return true
@@ -78,9 +83,6 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	if _, found := attrs["event"]; !found {
 		attrs["event"] = "go.log"
-	}
-	for _, a := range getExtraAttrs(ctx) {
-		attrs[a.Key] = a.Value.String()
 	}
 
 	// set or overwrite values for standard attributes
