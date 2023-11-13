@@ -16,6 +16,7 @@ import (
 type SHandler struct {
 	opts   *slog.HandlerOptions
 	queue  []map[string]string
+	maxlvl slog.Level
 	qlk    sync.Mutex
 	qcd    *sync.Cond
 	parent slog.Handler
@@ -99,6 +100,10 @@ func (s *SHandler) append(v map[string]string, l slog.Level) {
 
 	s.queue = append(s.queue, v)
 
+	if l > s.maxlvl {
+		s.maxlvl = l
+	}
+
 	if l >= slog.LevelInfo {
 		// do not broadcast for debug messages
 		s.qcd.Broadcast()
@@ -111,7 +116,7 @@ func (s *SHandler) run() {
 
 	// this runs in a separate goroutine
 	for {
-		if len(s.queue) == 0 {
+		if len(s.queue) == 0 || s.maxlvl < slog.LevelInfo {
 			// nothing in queue
 			s.qcd.Wait()
 			continue
@@ -119,6 +124,7 @@ func (s *SHandler) run() {
 		// take queue
 		q := s.queue
 		s.queue = nil
+		s.maxlvl = slog.LevelDebug
 
 		// run it (lock will be released during runQueue)
 		s.runQueue(q)
