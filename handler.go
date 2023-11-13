@@ -67,6 +67,10 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 		return true
 	})
 
+	if _, found := attrs["event"]; !found {
+		attrs["event"] = "go.log"
+	}
+
 	// set or overwrite values for standard attributes
 	attrs[slog.MessageKey] = r.Message
 	attrs[slog.TimeKey] = r.Time.Format(time.RFC3339Nano)
