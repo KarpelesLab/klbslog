@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"sync"
 	"time"
@@ -20,6 +21,7 @@ type SHandler struct {
 	qlk    sync.Mutex
 	qcd    *sync.Cond
 	parent slog.Handler
+	common map[string]string
 }
 
 func New(opts *slog.HandlerOptions, parent slog.Handler) slog.Handler {
@@ -29,8 +31,14 @@ func New(opts *slog.HandlerOptions, parent slog.Handler) slog.Handler {
 	res := &SHandler{
 		opts:   opts,
 		parent: parent,
+		common: make(map[string]string),
 	}
 	res.qcd = sync.NewCond(&res.qlk)
+
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		res.common["go.project"] = bi.Path
+		res.common["go.version"] = bi.GoVersion
+	}
 
 	// note: we can run this multiple times to have multiple parallel uploaders
 	go res.run()
@@ -76,6 +84,10 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 	attrs[slog.MessageKey] = r.Message
 	attrs[slog.TimeKey] = r.Time.Format(time.RFC3339Nano)
 	attrs[slog.LevelKey] = r.Level.String()
+
+	for k, v := range s.common {
+		attrs[k] = v
+	}
 
 	if s.opts.AddSource {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
