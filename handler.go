@@ -79,6 +79,9 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 	if _, found := attrs["event"]; !found {
 		attrs["event"] = "go.log"
 	}
+	for _, a := range getExtraAttrs(ctx) {
+		attrs[a.Key] = a.Value.String()
+	}
 
 	// set or overwrite values for standard attributes
 	attrs[slog.MessageKey] = r.Message
