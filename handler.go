@@ -151,7 +151,7 @@ func (s *SHandler) runQueue(q []map[string]string) {
 	// let's just call the rest function SLog:append with logs=q
 	cnt := 0
 	for {
-		_, err := rest.Do(context.Background(), "SLog:append", "POST", map[string]any{"logs": q})
+		_, err := rest.Do(context.WithValue(context.Background(), rest.SkipDebugLog, true), "SLog:append", "POST", map[string]any{"logs": q})
 		if err == nil {
 			// success
 			return
