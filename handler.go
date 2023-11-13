@@ -85,7 +85,7 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 		attrs["go.source"] = f.File + ":" + strconv.Itoa(f.Line)
 	}
 
-	s.append(attrs)
+	s.append(attrs, r.Level)
 
 	if s.parent != nil {
 		return s.parent.Handle(ctx, r)
@@ -93,12 +93,16 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-func (s *SHandler) append(v map[string]string) {
+func (s *SHandler) append(v map[string]string, l slog.Level) {
 	s.qlk.Lock()
 	defer s.qlk.Unlock()
 
 	s.queue = append(s.queue, v)
-	s.qcd.Broadcast()
+
+	if l >= slog.LevelInfo {
+		// do not broadcast for debug messages
+		s.qcd.Broadcast()
+	}
 }
 
 func (s *SHandler) run() {
