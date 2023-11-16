@@ -35,6 +35,9 @@ func WithAttributes(ctx context.Context, args ...any) context.Context {
 			args = args[1:]
 		}
 	}
+	if len(attrs) == 0 {
+		return ctx
+	}
 	return &ctxAttributes{ctx, attrs}
 }
 
