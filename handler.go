@@ -3,6 +3,7 @@ package klbslog
 import (
 	"context"
 	"log"
+	"net/http"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"log/slog"
 
 	"github.com/KarpelesLab/rest"
+	"github.com/KarpelesLab/webutil"
 )
 
 type SHandler struct {
@@ -83,6 +85,21 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 
 	if _, found := attrs["event"]; !found {
 		attrs["event"] = "go.log"
+	}
+
+	// attempt to get any info from a http request
+	var req *http.Request
+	ctx.Value(&req)
+	if req != nil {
+		attrs["http.host"] = req.Host
+		attrs["http.method"] = req.Method
+		attrs["http.request_uri"] = req.RequestURI
+		attrs["http.proto"] = req.Proto
+		ipp := webutil.ParseIPPort(req.RemoteAddr)
+		attrs["remote_ip"] = ipp.IP.String()
+		if trace := req.Header.Get("Sec-Trace-Id"); trace != "" {
+			attrs["http.trace"] = trace
+		}
 	}
 
 	// set or overwrite values for standard attributes
