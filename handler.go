@@ -101,6 +101,9 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 			attrs["http.trace"] = trace
 		}
 	}
+	if reqId, ok := ctx.Value("request_id").(string); ok {
+		attrs["req"] = reqId
+	}
 
 	// set or overwrite values for standard attributes
 	attrs[slog.MessageKey] = r.Message
