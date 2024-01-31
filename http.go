@@ -79,6 +79,20 @@ func (ri *reqInfo) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return nil, nil, http.ErrNotSupported
 }
 
+func (ri *reqInfo) Value(v any) any {
+	switch sv := v.(type) {
+	case **http.Request:
+		*sv = ri.req
+		return ri.req
+	case string:
+		switch sv {
+		case "request_id":
+			return ri.reqId.String()
+		}
+	}
+	return ri.Context.Value(v)
+}
+
 func (ri *reqInfo) log() {
 	// actually log request
 	q_time := time.Since(ri.start)
