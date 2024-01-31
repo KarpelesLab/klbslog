@@ -27,12 +27,11 @@ func (r *RequestLogHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 		Context:        req.Context(),
 		reqId:          uuid.Must(uuid.NewRandom()),
 		start:          time.Now(),
-		req:            req,
 	}
-	defer ri.log()
-
 	req = req.WithContext(ri)
+	ri.req = req
 
+	defer ri.log()
 	r.Handler.ServeHTTP(ri, req)
 }
 
