@@ -14,3 +14,5 @@ github.com/KarpelesLab/webutil v0.1.1 h1:w5iCebZb3kv39M23/VrL9w97oTW6MEwFyW6VnJF
 github.com/KarpelesLab/webutil v0.1.1/go.mod h1:AKTsmoimqwSdJHtZzBnvxcjQv3lgyw/GVJFVyXaDilU=
 github.com/KarpelesLab/webutil v0.2.0 h1:EzCegkQUzTNnnCIxu6sTRgZIE/VbrNBDXUCtYrvFHAA=
 github.com/KarpelesLab/webutil v0.2.0/go.mod h1:AKTsmoimqwSdJHtZzBnvxcjQv3lgyw/GVJFVyXaDilU=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=

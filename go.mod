@@ -7,4 +7,7 @@ require (
 	github.com/KarpelesLab/webutil v0.2.0
 )
 
-require github.com/KarpelesLab/pjson v0.1.9 // indirect
+require (
+	github.com/KarpelesLab/pjson v0.1.9 // indirect
+	github.com/google/uuid v1.6.0 // indirect
+)
