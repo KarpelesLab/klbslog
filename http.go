@@ -86,6 +86,8 @@ func (ri *reqInfo) Value(v any) any {
 		return ri.req
 	case string:
 		switch sv {
+		case "http_request":
+			return ri.req
 		case "request_id":
 			return ri.reqId.String()
 		}
