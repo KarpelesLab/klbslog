@@ -90,7 +90,7 @@ func (ri *reqInfo) log() {
 			// pass this to the higher powers
 			panic(err)
 		}
-		slog.ErrorContext(r.Context(), fmt.Sprintf("[http] Crash during %s %s: %s", r.Method, r.RequestURI, err), "event", "platform-fe:http:crash", "category", "go.panic")
+		slog.ErrorContext(r.Context(), fmt.Sprintf("[http] Crash during %s %s: %s", r.Method, r.RequestURI, err), "event", "http:crash", "category", "go.panic")
 		debug.PrintStack()
 	}
 
