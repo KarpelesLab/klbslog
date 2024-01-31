@@ -28,11 +28,10 @@ func (r *RequestLogHandler) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 		reqId:          uuid.Must(uuid.NewRandom()),
 		start:          time.Now(),
 	}
-	req = req.WithContext(ri)
-	ri.req = req
+	ri.req = req.WithContext(ri)
 
 	defer ri.log()
-	r.Handler.ServeHTTP(ri, req)
+	r.Handler.ServeHTTP(ri.pass())
 }
 
 type reqInfo struct {
@@ -92,6 +91,10 @@ func (ri *reqInfo) Value(v any) any {
 		}
 	}
 	return ri.Context.Value(v)
+}
+
+func (ri *reqInfo) pass() (http.ResponseWriter, *http.Request) {
+	return ri, ri.req
 }
 
 func (ri *reqInfo) log() {
