@@ -3,6 +3,7 @@ package klbslog
 import (
 	"context"
 	"log"
+	"net"
 	"net/http"
 	"runtime"
 	"runtime/debug"
@@ -13,7 +14,6 @@ import (
 	"log/slog"
 
 	"github.com/KarpelesLab/rest"
-	"github.com/KarpelesLab/webutil"
 )
 
 type SHandler struct {
@@ -95,8 +95,12 @@ func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
 		attrs["http.method"] = req.Method
 		attrs["http.request_uri"] = req.RequestURI
 		attrs["http.proto"] = req.Proto
-		ipp := webutil.ParseIPPort(req.RemoteAddr)
-		attrs["remote_ip"] = ipp.IP.String()
+		ip, _, err := net.SplitHostPort(req.RemoteAddr)
+		if err != nil {
+			// shouldn't happen
+			ip = req.RemoteAddr
+		}
+		attrs["remote_ip"] = ip
 		if trace := req.Header.Get("Sec-Trace-Id"); trace != "" {
 			attrs["http.trace"] = trace
 		}

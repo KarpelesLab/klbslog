@@ -3,6 +3,7 @@ package klbslog
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -10,8 +11,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/KarpelesLab/pjson"
-	"github.com/KarpelesLab/webutil"
 	"github.com/google/uuid"
 )
 
@@ -112,7 +111,11 @@ func (ri *reqInfo) log() {
 		debug.PrintStack()
 	}
 
-	ipp := webutil.ParseIPPort(r.RemoteAddr)
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		// shouldn't happen
+		ip = r.RemoteAddr
+	}
 
 	logEntry := map[string]any{
 		"remote_addr": r.RemoteAddr,
@@ -126,7 +129,7 @@ func (ri *reqInfo) log() {
 		"h_request":   censorHeaders(r.Header, "Cookie"),
 		"h_response":  censorHeaders(ri.Header(), "Set-Cookie"),
 	}
-	buf, _ := pjson.Marshal(logEntry)
+	buf, _ := json.Marshal(logEntry)
 
-	slog.InfoContext(r.Context(), string(buf), "event", "http:log", "remote_ip", ipp.IP.String(), "http.host", r.Host, "http.method", r.Method, "http.request_uri", r.RequestURI, "http.proto", r.Proto, "http.status", ri.statusCode, "http.written", ri.written)
+	slog.InfoContext(r.Context(), string(buf), "event", "http:log", "remote_ip", ip, "http.host", r.Host, "http.method", r.Method, "http.request_uri", r.RequestURI, "http.proto", r.Proto, "http.status", ri.statusCode, "http.written", ri.written)
 }
