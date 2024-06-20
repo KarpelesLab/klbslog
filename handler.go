@@ -151,21 +151,32 @@ func (s *SHandler) append(v map[string]string, l slog.Level) {
 	}
 }
 
-func (s *SHandler) run() {
+// takeQueue waits for elements to be added to the log queue, and will take
+// what it finds there
+func (s *SHandler) takeQueue() []map[string]string {
 	s.qlk.Lock()
 	defer s.qlk.Unlock()
 
-	// this runs in a separate goroutine
 	for {
 		if len(s.queue) == 0 || s.maxlvl < slog.LevelInfo {
 			// nothing in queue
 			s.qcd.Wait()
 			continue
 		}
+
 		// take queue
 		q := s.queue
 		s.queue = nil
 		s.maxlvl = slog.LevelDebug
+
+		return q
+	}
+}
+
+func (s *SHandler) run() {
+	// this runs in a separate goroutine
+	for {
+		q := s.takeQueue()
 
 		// run it (lock will be released during runQueue)
 		s.runQueue(q)
@@ -173,10 +184,6 @@ func (s *SHandler) run() {
 }
 
 func (s *SHandler) runQueue(q []map[string]string) {
-	// unlock qlk while running queue, but lock back afterward
-	s.qlk.Unlock()
-	defer s.qlk.Lock()
-
 	// let's just call the rest function SLog:append with logs=q
 	cnt := 0
 	for {
