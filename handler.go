@@ -25,7 +25,10 @@ type SHandler struct {
 	target Receiver
 }
 
-func New(opts *slog.HandlerOptions, parent slog.Handler) slog.Handler {
+func New(opts *slog.HandlerOptions, parent slog.Handler, receiver ...Receiver) slog.Handler {
+	if len(receiver) < 1 {
+		receiver = []Receiver{DefaultReceiver}
+	}
 	if opts == nil {
 		opts = &slog.HandlerOptions{}
 	}
@@ -33,7 +36,7 @@ func New(opts *slog.HandlerOptions, parent slog.Handler) slog.Handler {
 		opts:   opts,
 		parent: parent,
 		common: make(map[string]string),
-		target: DefaultReceiver,
+		target: receiver[0],
 	}
 	res.qcd = sync.NewCond(&res.qlk)
 
