@@ -12,6 +12,9 @@ import (
 // SendTo will serialize and write the packet to the specified connection. Make sure
 // to lock it so multiple packets aren't sent at the same time.
 func (p *Packet) SendTo(c *net.UnixConn) error {
+	if len(p.FDs) != 0 {
+		return errors.New("unable to send FDs over non-UNIX")
+	}
 	hdr := make([]byte, 12)
 	binary.BigEndian.PutUint16(hdr[:2], p.Type)
 	binary.BigEndian.PutUint16(hdr[2:4], uint16(len(p.FDs)))
@@ -23,10 +26,7 @@ func (p *Packet) SendTo(c *net.UnixConn) error {
 			return err
 		}
 	}
-	if len(p.FDs) == 0 {
-		return nil
-	}
-	return errors.New("unable to send FDs over non-UNIX")
+	return nil
 }
 
 // ReadFrom will receive a packet from the specified unixconn
@@ -43,6 +43,9 @@ func (p *Packet) ReadFrom(c *net.UnixConn) error {
 	if ln > 1024*1024 {
 		return errors.New("packet is too large")
 	}
+	if nfd != 0 {
+		return errors.New("unable to receive FDs over non-UNIX")
+	}
 	if ln == 0 {
 		p.Data = nil
 	} else {
@@ -53,8 +56,5 @@ func (p *Packet) ReadFrom(c *net.UnixConn) error {
 		}
 	}
 
-	if nfd == 0 {
-		return nil
-	}
-	return errors.New("unable to receive FDs over non-UNIX")
+	return nil
 }
