@@ -9,15 +9,17 @@ import (
 	"time"
 )
 
-type logagentPipe struct {
+type LogAgent struct {
 	c *net.UnixConn
 }
 
-func LogAgent() Receiver {
-	return &logagentPipe{}
+var _ Receiver = &LogAgent{}
+
+func NewLogAgent() *LogAgent {
+	return &LogAgent{}
 }
 
-func (p *logagentPipe) ProcessLogs(logs []map[string]string) error {
+func (p *LogAgent) ProcessLogs(logs []map[string]string) error {
 	for _, l := range logs {
 		obj, err := json.Marshal(l)
 		if err != nil {
@@ -50,7 +52,7 @@ func (p *logagentPipe) ProcessLogs(logs []map[string]string) error {
 	return nil
 }
 
-func (p *logagentPipe) connect() (*net.UnixConn, error) {
+func (p *LogAgent) connect() (*net.UnixConn, error) {
 	id := os.Getuid()
 	if id == 0 {
 		return net.DialUnix("unix", nil, &net.UnixAddr{Name: "/run/logagent.sock"})
@@ -67,7 +69,7 @@ func (p *logagentPipe) connect() (*net.UnixConn, error) {
 }
 
 // send sends a single packet to the local logagent
-func (p *logagentPipe) send(pkt *Packet) error {
+func (p *LogAgent) send(pkt *Packet) error {
 	if p.c == nil {
 		c, err := p.connect()
 		if err == nil {
