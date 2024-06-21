@@ -6,11 +6,13 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
 type LogAgent struct {
-	c *net.UnixConn
+	c  *net.UnixConn
+	lk sync.Mutex
 }
 
 var _ Receiver = &LogAgent{}
@@ -19,6 +21,7 @@ func NewLogAgent() *LogAgent {
 	return &LogAgent{}
 }
 
+// ProcessLogs sends the logs to the logagent daemon
 func (p *LogAgent) ProcessLogs(logs []map[string]string) error {
 	for _, l := range logs {
 		obj, err := json.Marshal(l)
@@ -52,6 +55,52 @@ func (p *LogAgent) ProcessLogs(logs []map[string]string) error {
 	return nil
 }
 
+// GetLogfile returns a write-only os.File that can be used when using os/exec to start daemons.
+//
+// Remember to close the os.File after calling Start.
+func (p *LogAgent) GetLogfile(name string) (*os.File, error) {
+	c, err := p.getConnection()
+	if err != nil {
+		return nil, err
+	}
+	req, err := json.Marshal(map[string]any{"name": name})
+	if err != nil {
+		return nil, err
+	}
+
+	pkt := &Packet{
+		Type: PktPipeRequest,
+		Data: req,
+	}
+	err = pkt.SendTo(c)
+	if err != nil {
+		return nil, err
+	}
+	res := &Packet{}
+	err = res.ReadFrom(c)
+	if err != nil {
+		return nil, err
+	}
+	return res.FDs[0], nil
+}
+
+// getConnection returns the connection, getting a lock in the process
+func (p *LogAgent) getConnection() (*net.UnixConn, error) {
+	p.lk.Lock()
+	defer p.lk.Unlock()
+
+	if p.c != nil {
+		return p.c, nil
+	}
+	c, err := p.connect()
+	if err != nil {
+		return nil, err
+	}
+	p.c = c
+	return c, nil
+}
+
+// connect establishes a connection to the local logagent daemon and returns the connection
 func (p *LogAgent) connect() (*net.UnixConn, error) {
 	id := os.Getuid()
 	if id == 0 {
@@ -70,12 +119,9 @@ func (p *LogAgent) connect() (*net.UnixConn, error) {
 
 // send sends a single packet to the local logagent
 func (p *LogAgent) send(pkt *Packet) error {
-	if p.c == nil {
-		c, err := p.connect()
-		if err == nil {
-			return err
-		}
-		p.c = c
+	c, err := p.getConnection()
+	if err != nil {
+		return err
 	}
-	return pkt.SendTo(p.c)
+	return pkt.SendTo(c)
 }
