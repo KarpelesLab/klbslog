@@ -1,10 +1,7 @@
 package klbslog
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"io"
 	"log"
 	"net"
 	"net/http"
@@ -25,8 +22,7 @@ type SHandler struct {
 	qcd    *sync.Cond
 	parent slog.Handler
 	common map[string]string
-	client *http.Client
-	target string
+	target Receiver
 }
 
 func New(opts *slog.HandlerOptions, parent slog.Handler) slog.Handler {
@@ -37,8 +33,7 @@ func New(opts *slog.HandlerOptions, parent slog.Handler) slog.Handler {
 		opts:   opts,
 		parent: parent,
 		common: make(map[string]string),
-		client: http.DefaultClient,
-		target: "https://ws.atonline.com/_special/rest/SLog:append", // default target
+		target: DefaultReceiver,
 	}
 	res.qcd = sync.NewCond(&res.qlk)
 
@@ -71,16 +66,6 @@ func (s *SHandler) WithGroup(name string) slog.Handler {
 		return s
 	}
 	panic("not implemented")
-}
-
-// SetTarget sets the target url for logs to be sent to
-func (s *SHandler) SetTarget(targetUrl string) {
-	s.target = targetUrl
-}
-
-// SetHttpClient sets the HTTP client to use to send requests
-func (s *SHandler) SetHttpClient(client *http.Client) {
-	s.client = client
 }
 
 func (s *SHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -194,44 +179,9 @@ func (s *SHandler) run() {
 		q := s.takeQueue()
 
 		// run it (lock will be released during runQueue)
-		s.runQueue(q)
-	}
-}
-
-func (s *SHandler) runQueue(q []map[string]string) {
-	if len(q) == 0 {
-		// nothing to do
-		return
-	}
-	// let's just call the rest function SLog:append with logs=q
-	body, err := json.Marshal(map[string]any{"logs": q})
-	if err != nil {
-		// shouldn't happen
-		log.Printf("[klbslog] failed to prepare POST body: %s", err)
-		return
-	}
-	req, err := http.NewRequest("POST", s.target, bytes.NewReader(body))
-	if err != nil {
-		log.Printf("[klbslog] failed to prepare POST request: %s", err)
-		return
-	}
-	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
-	var t time.Duration
-
-	cnt := 0
-	for {
-		_, err := s.client.Do(req)
-		if err == nil {
-			// success
-			return
+		err := s.target.ProcessLogs(q)
+		if err != nil {
+			log.Printf("[klbslog] failed to process logs: %s", err)
 		}
-		log.Printf("[klbslog] Failed to push logs: %s", err)
-		if cnt > 5 {
-			return
-		}
-		cnt += 1
-		// wait increasingly longer (but very short)
-		t = (t * 2) + 10*time.Millisecond
-		time.Sleep(t)
 	}
 }
