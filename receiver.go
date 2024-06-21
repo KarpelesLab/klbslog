@@ -33,6 +33,7 @@ func (p PostReceiver) ProcessLogs(logs []map[string]string) error {
 	if err != nil {
 		return fmt.Errorf("failed to prepare request: %w", err)
 	}
+	req.Header.Set("Content-Type", "application/json")
 	req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(bytes.NewReader(body)), nil }
 	var t time.Duration
 
