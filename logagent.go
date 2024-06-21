@@ -23,6 +23,9 @@ func NewLogAgent() *LogAgent {
 
 // ProcessLogs sends the logs to the logagent daemon
 func (p *LogAgent) ProcessLogs(logs []map[string]string) error {
+	p.lk.Lock()
+	defer p.lk.Unlock()
+
 	for _, l := range logs {
 		obj, err := json.Marshal(l)
 		if err != nil {
@@ -59,6 +62,9 @@ func (p *LogAgent) ProcessLogs(logs []map[string]string) error {
 //
 // Remember to close the os.File after calling Start.
 func (p *LogAgent) GetLogfile(name string) (*os.File, error) {
+	p.lk.Lock()
+	defer p.lk.Unlock()
+
 	c, err := p.getConnection()
 	if err != nil {
 		return nil, err
@@ -81,14 +87,14 @@ func (p *LogAgent) GetLogfile(name string) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
+	if res.Type != PktPipeResponse {
+		return nil, fmt.Errorf("unexpected response %x", res.Type)
+	}
 	return res.FDs[0], nil
 }
 
 // getConnection returns the connection, getting a lock in the process
 func (p *LogAgent) getConnection() (*net.UnixConn, error) {
-	p.lk.Lock()
-	defer p.lk.Unlock()
-
 	if p.c != nil {
 		return p.c, nil
 	}
