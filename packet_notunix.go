@@ -6,12 +6,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"net"
 )
 
 // SendTo will serialize and write the packet to the specified connection. Make sure
 // to lock it so multiple packets aren't sent at the same time.
-func (p *Packet) SendTo(c *net.UnixConn) error {
+func (p *Packet) SendTo(c io.Writer) error {
 	if len(p.FDs) != 0 {
 		return errors.New("unable to send FDs over non-UNIX")
 	}
@@ -20,17 +19,15 @@ func (p *Packet) SendTo(c *net.UnixConn) error {
 	binary.BigEndian.PutUint16(hdr[2:4], uint16(len(p.FDs)))
 	binary.BigEndian.PutUint32(hdr[4:8], p.Flags)
 	binary.BigEndian.PutUint32(hdr[8:12], uint32(len(p.Data)))
-	if len(p.Data) > 0 {
-		_, err := c.Write(append(hdr, p.Data...))
-		if err != nil {
-			return err
-		}
+	_, err := c.Write(append(hdr, p.Data...))
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 // ReadFrom will receive a packet from the specified unixconn
-func (p *Packet) ReadFrom(c *net.UnixConn) error {
+func (p *Packet) ReadFrom(c io.Reader) error {
 	hdr := make([]byte, 12)
 	_, err := io.ReadFull(c, hdr)
 	if err != nil {

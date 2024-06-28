@@ -6,14 +6,23 @@ import (
 	"encoding/binary"
 	"errors"
 	"io"
-	"net"
 	"os"
 	"syscall"
 )
 
+func syscallConn(c any) (syscall.RawConn, error) {
+	sc, ok := c.(interface {
+		SyscallConn() (syscall.RawConn, error)
+	})
+	if !ok {
+		return nil, errors.New("underlying connection does not support syscalls")
+	}
+	return sc.SyscallConn()
+}
+
 // SendTo will serialize and write the packet to the specified connection. Make sure
 // to lock it so multiple packets aren't sent at the same time.
-func (p *Packet) SendTo(c *net.UnixConn) error {
+func (p *Packet) SendTo(c io.Writer) error {
 	hdr := make([]byte, 12)
 	binary.BigEndian.PutUint16(hdr[:2], p.Type)
 	binary.BigEndian.PutUint16(hdr[2:4], uint16(len(p.FDs)))
@@ -27,7 +36,7 @@ func (p *Packet) SendTo(c *net.UnixConn) error {
 		return nil
 	}
 
-	sc, err := c.SyscallConn()
+	sc, err := syscallConn(c)
 	if err != nil {
 		return err
 	}
@@ -48,7 +57,7 @@ func (p *Packet) SendTo(c *net.UnixConn) error {
 }
 
 // ReadFrom will receive a packet from the specified unixconn
-func (p *Packet) ReadFrom(c *net.UnixConn) error {
+func (p *Packet) ReadFrom(c io.Reader) error {
 	hdr := make([]byte, 12)
 	_, err := io.ReadFull(c, hdr)
 	if err != nil {
@@ -75,7 +84,7 @@ func (p *Packet) ReadFrom(c *net.UnixConn) error {
 		return nil
 	}
 
-	sc, err := c.SyscallConn()
+	sc, err := syscallConn(c)
 	if err != nil {
 		return err
 	}
