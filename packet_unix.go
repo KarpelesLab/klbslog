@@ -19,11 +19,9 @@ func (p *Packet) SendTo(c *net.UnixConn) error {
 	binary.BigEndian.PutUint16(hdr[2:4], uint16(len(p.FDs)))
 	binary.BigEndian.PutUint32(hdr[4:8], p.Flags)
 	binary.BigEndian.PutUint32(hdr[8:12], uint32(len(p.Data)))
-	if len(p.Data) > 0 {
-		_, err := c.Write(append(hdr, p.Data...))
-		if err != nil {
-			return err
-		}
+	_, err := c.Write(append(hdr, p.Data...))
+	if err != nil {
+		return err
 	}
 	if len(p.FDs) == 0 {
 		return nil
