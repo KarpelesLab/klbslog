@@ -52,5 +52,8 @@ func (p PostReceiver) ProcessLogs(logs []map[string]string) error {
 		// wait increasingly longer (but very short)
 		t = (t * 2) + 10*time.Millisecond
 		time.Sleep(t)
+		// reset body: the previous Do(req) consumed req.Body, so without
+		// this the retry would send Content-Length with no data
+		req.Body = io.NopCloser(bytes.NewReader(body))
 	}
 }
